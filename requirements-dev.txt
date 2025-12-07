@@ -1,0 +1,27 @@
+# 開発用依存関係
+
+# pre-commit
+pre-commit>=3.5.0
+
+# コードフォーマッター
+black>=24.3.0
+isort>=5.13.0
+
+# リンター
+flake8>=7.0.0
+pylint>=3.0.0
+
+# 型チェック
+mypy>=1.8.0
+
+# セキュリティチェック
+bandit>=1.7.0
+
+# テスト
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+
+# その他開発ツール
+ipython>=8.20.0
+autopep8>=2.0.0

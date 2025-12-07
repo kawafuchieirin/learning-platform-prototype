@@ -1,0 +1,83 @@
+repos:
+  # 汎用的なフック
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-toml
+      - id: debug-statements  # Pythonのデバッグ文を検出
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python用フック
+  # Black - コードフォーマッター
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  # isort - インポートのソート
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  # flake8 - リンター
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: ['--max-line-length=88', '--extend-ignore=E203']
+
+  # mypy - 型チェック
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        args: ['--ignore-missing-imports']
+
+  # bandit - セキュリティチェック
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args: ['-r', '.']
+        exclude: ^tests/
+
+  # Terraform用フック
+  # terraform fmt
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.88.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+      - id: terraform_tflint
+        args:
+          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+      - id: terraform_docs
+        args:
+          - --hook-config=--path-to-file=README.md
+          - --hook-config=--add-to-existing-file=true
+          - --hook-config=--create-file-if-not-exist=true
+      - id: terraform_checkov
+        args:
+          - --args=--quiet
+      - id: terraform_tfsec
+
+  # セキュリティスキャン
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+
+# 設定
+files: ''
+exclude: '^(\.git|\.venv|venv|node_modules|__pycache__|\.mypy_cache|\.pytest_cache|\.tox|dist|build)/'
+fail_fast: false
