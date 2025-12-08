@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - learning-platform
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Analytics API を含める場合（オプション）
+  analytics-api:
+    image: docker-analytics-api
+    ports:
+      - "8003:8000"
+    environment:
+      - ENV=local
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+    depends_on:
+      - dynamodb-local
+    networks:
+      - learning-platform
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8004:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    networks:
+      - learning-platform
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    ports:
+      - "8005:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+    depends_on:
+      - dynamodb-local
+    networks:
+      - learning-platform
+
+networks:
+  learning-platform:
+    driver: bridge
+
+volumes:
+  dynamodb-data:
