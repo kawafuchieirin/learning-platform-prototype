@@ -15,17 +15,35 @@ learning-platform-prototype - 20〜30人向けの小規模SaaS型学習管理プ
 6. **学習記録テンプレート** - 記録作成の効率化
 
 ### 技術スタック
+
+#### バックエンド
 - **言語**: Python 3.13
+- **パッケージ管理**: Poetry
 - **フレームワーク**: FastAPI
 - **インフラ**: AWS (Lambda + API Gateway)
 - **IaC**: Terraform
 - **データベース**: DynamoDB
 - **外部連携**: Slack OAuth / Bot Token
 
+#### フロントエンド
+- **言語**: TypeScript
+- **フレームワーク**: React 18
+- **ビルドツール**: Vite
+- **スタイリング**: Tailwind CSS
+- **状態管理**: Zustand
+- **ルーティング**: React Router v6
+- **HTTPクライアント**: Axios
+- **UI コンポーネント**: Radix UI + Tailwind
+- **グラフ**: Recharts
+- **フォーム管理**: React Hook Form + Zod
+- **テスト**: Vitest + React Testing Library
+- **リンター/フォーマッター**: ESLint + Prettier
+
 ### アーキテクチャ方針
 - マイクロサービスアーキテクチャ（各機能を独立したLambda関数として実装）
 - サーバーレス設計（ECSではなくLambda関数を使用）
 - API駆動型設計（各機能はAPIとして公開）
+- フロントエンドはSPAとして実装（S3 + CloudFront でホスティング）
 - ローカル開発はDockerで環境構築（DynamoDB Local使用）
 - AWS環境は本番環境のみ構築
 
@@ -33,15 +51,26 @@ learning-platform-prototype - 20〜30人向けの小規模SaaS型学習管理プ
 
 ### 必要な前提条件
 - Python 3.13
+- Poetry 1.7以上
+- Node.js 20以上
+- pnpm 8以上
 - Docker & Docker Compose
 - Terraform 1.0以上（本番環境デプロイ用）
 - AWS CLI（本番環境デプロイ用、設定済み）
 - Git
 
 ### 初期セットアップ
+
+#### バックエンド
 ```bash
-# 開発用依存関係のインストール
-pip install -r requirements-dev.txt
+# Poetryのインストール（未インストールの場合）
+curl -sSL https://install.python-poetry.org | python3 -
+
+# 依存関係のインストール
+poetry install
+
+# 仮想環境に入る
+poetry shell
 
 # pre-commitフックのインストール
 pre-commit install
@@ -54,7 +83,22 @@ pre-commit run --all-files
 docker-compose up -d
 
 # DynamoDB Localのテーブル初期化
-python scripts/init_local_db.py
+poetry run python scripts/init_local_db.py
+```
+
+#### フロントエンド
+```bash
+# フロントエンドディレクトリへ移動
+cd frontend
+
+# pnpmのインストール（未インストールの場合）
+npm install -g pnpm
+
+# 依存関係のインストール
+pnpm install
+
+# 開発サーバーの起動
+pnpm dev
 ```
 
 ### ローカル開発環境（Docker）
@@ -89,11 +133,14 @@ services:
 
 ### Docker関連
 ```bash
-# Docker環境の起動
+# Docker環境の起動（バックエンド + DB）
 docker-compose up -d
 
 # Docker環境の停止
 docker-compose down
+
+# フルスタック起動（バックエンド + フロントエンド）
+docker-compose up -d && cd frontend && pnpm dev
 
 # ログ確認
 docker-compose logs -f api
@@ -113,33 +160,86 @@ docker-compose down && docker-compose up -d --build
 # 手動でpre-commitを実行
 pre-commit run --all-files
 
-# 特定のフックのみ実行
+# 特定のフックのみ実行（Python）
 pre-commit run black --all-files
 pre-commit run flake8 --all-files
+
+# 特定のフックのみ実行（フロントエンド）
+pre-commit run eslint --all-files
+pre-commit run prettier --all-files
 
 # pre-commitをアップデート
 pre-commit autoupdate
 ```
 
-### Python開発
+### Python開発（Poetry）
 ```bash
+# 仮想環境に入る
+poetry shell
+
+# 依存関係の追加
+poetry add package-name
+poetry add --group dev package-name  # 開発依存
+
+# 依存関係の更新
+poetry update
+
+# lockファイルの更新
+poetry lock --no-update
+
 # コードフォーマット
-black .
-isort .
+poetry run black .
+poetry run isort .
 
 # リント実行
-flake8 .
-mypy .
+poetry run flake8 .
+poetry run mypy .
 
 # セキュリティチェック
-bandit -r .
+poetry run bandit -r .
 
 # テスト実行（ローカル）
-docker-compose exec api pytest
-docker-compose exec api pytest --cov=. --cov-report=html
+poetry run pytest
+poetry run pytest --cov=. --cov-report=html
 
 # ローカルでのAPI起動（Docker外）
-uvicorn src.api.main:app --reload --port 8000
+poetry run uvicorn src.api.main:app --reload --port 8000
+```
+
+### フロントエンド開発
+```bash
+# 開発サーバーの起動
+pnpm dev
+
+# ビルド
+pnpm build
+
+# プレビュー（ビルド結果の確認）
+pnpm preview
+
+# テスト実行
+pnpm test
+pnpm test:watch  # ウォッチモード
+pnpm test:coverage  # カバレッジレポート
+
+# リント実行
+pnpm lint
+pnpm lint:fix  # 自動修正
+
+# フォーマット
+pnpm format
+pnpm format:check  # チェックのみ
+
+# 型チェック
+pnpm type-check
+
+# 依存関係の追加
+pnpm add package-name
+pnpm add -D package-name  # 開発依存
+
+# Storybookの起動（UIコンポーネント開発）
+pnpm storybook
+pnpm build-storybook
 ```
 
 ### Terraform開発（本番環境デプロイ用）
@@ -171,58 +271,115 @@ tfsec .
 
 ### 本番環境デプロイ
 ```bash
-# デプロイスクリプト実行
+# バックエンドデプロイ
+./scripts/deploy-backend.sh
+
+# フロントエンドデプロイ
+./scripts/deploy-frontend.sh
+
+# フルデプロイ
 ./scripts/deploy.sh
 
 # Lambda関数の個別デプロイ
 cd infrastructure/environments/prod
 terraform apply -target=module.lambda_auth
+
+# フロントエンドのみデプロイ
+cd frontend && pnpm build
+aws s3 sync dist/ s3://your-bucket-name --delete
+aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 ```
 
 ## ディレクトリ構造
 
 ```
 learning-platform-prototype/
-├── src/                          # ソースコード
-│   ├── api/                      # FastAPI アプリケーション
-│   │   ├── auth/                 # 認証機能
-│   │   ├── timer/                # タイマー機能
-│   │   ├── roadmap/              # ロードマップ機能
-│   │   ├── slack/                # Slack連携
-│   │   ├── analytics/            # 分析機能
-│   │   └── records/              # 学習記録
-│   ├── lambda/                   # Lambda関数
-│   │   ├── auth/                 # 認証Lambda
-│   │   ├── timer/                # タイマーLambda
-│   │   ├── roadmap/              # ロードマップLambda
-│   │   ├── slack/                # Slack連携Lambda
-│   │   ├── analytics/            # 分析Lambda
-│   │   └── records/              # 学習記録Lambda
-│   ├── models/                   # データモデル定義
-│   ├── services/                 # ビジネスロジック
-│   ├── repositories/             # DynamoDBアクセス層
-│   └── shared/                   # 共通ユーティリティ
+├── backend/                      # バックエンドコード
+│   ├── src/                      # ソースコード
+│   │   ├── api/                  # FastAPI アプリケーション
+│   │   │   ├── auth/             # 認証機能
+│   │   │   ├── timer/            # タイマー機能
+│   │   │   ├── roadmap/          # ロードマップ機能
+│   │   │   ├── slack/            # Slack連携
+│   │   │   ├── analytics/        # 分析機能
+│   │   │   └── records/          # 学習記録
+│   │   ├── lambda/               # Lambda関数
+│   │   │   ├── auth/             # 認証Lambda
+│   │   │   ├── timer/            # タイマーLambda
+│   │   │   ├── roadmap/          # ロードマップLambda
+│   │   │   ├── slack/            # Slack連携Lambda
+│   │   │   ├── analytics/        # 分析Lambda
+│   │   │   └── records/          # 学習記録Lambda
+│   │   ├── models/               # データモデル定義
+│   │   ├── services/             # ビジネスロジック
+│   │   ├── repositories/         # DynamoDBアクセス層
+│   │   └── shared/               # 共通ユーティリティ
+│   ├── tests/                    # テストコード
+│   │   ├── unit/                 # ユニットテスト
+│   │   └── integration/          # 統合テスト
+│   ├── poetry.lock               # Poetry依存関係ロック
+│   └── pyproject.toml            # Poetry設定ファイル
+├── frontend/                     # フロントエンドコード
+│   ├── public/                   # 静的ファイル
+│   │   └── favicon.ico
+│   ├── src/
+│   │   ├── api/                  # API クライアント
+│   │   │   ├── auth.ts
+│   │   │   ├── timer.ts
+│   │   │   ├── roadmap.ts
+│   │   │   ├── slack.ts
+│   │   │   ├── analytics.ts
+│   │   │   └── records.ts
+│   │   ├── components/           # 共通UIコンポーネント
+│   │   │   ├── common/           # 汎用コンポーネント
+│   │   │   ├── layout/           # レイアウトコンポーネント
+│   │   │   └── charts/           # グラフコンポーネント
+│   │   ├── features/             # 機能別コンポーネント
+│   │   │   ├── auth/
+│   │   │   ├── timer/
+│   │   │   ├── roadmap/
+│   │   │   ├── slack/
+│   │   │   ├── analytics/
+│   │   │   └── records/
+│   │   ├── hooks/                # カスタムフック
+│   │   ├── pages/                # ページコンポーネント
+│   │   │   ├── login/
+│   │   │   ├── dashboard/
+│   │   │   ├── roadmap/
+│   │   │   ├── analytics/
+│   │   │   └── settings/
+│   │   ├── store/                # 状態管理（Zustand）
+│   │   ├── styles/               # グローバルスタイル
+│   │   ├── utils/                # ユーティリティ関数
+│   │   ├── constants/            # 定数定義
+│   │   ├── types/                # TypeScript型定義
+│   │   ├── App.tsx               # メインコンポーネント
+│   │   └── main.tsx              # エントリポイント
+│   ├── .env.example              # 環境変数サンプル
+│   ├── index.html                # HTMLテンプレート
+│   ├── package.json
+│   ├── pnpm-lock.yaml            # pnpm依存関係ロック
+│   ├── tsconfig.json             # TypeScript設定
+│   ├── vite.config.ts            # Vite設定
+│   ├── tailwind.config.js        # Tailwind設定
+│   ├── postcss.config.js         # PostCSS設定
+│   └── README.md                 # フロントエンド開発ドキュメント
 ├── infrastructure/               # Terraformコード
 │   ├── modules/                  # Terraformモジュール
-│   │   ├── lambda/              # Lambda関数モジュール
-│   │   ├── api_gateway/         # API Gatewayモジュール
-│   │   ├── dynamodb/            # DynamoDBモジュール
-│   │   └── iam/                 # IAMモジュール
-│   └── environments/            # 環境別設定
-│       └── prod/                # 本番環境のみ（ローカルはDocker使用）
-├── tests/                       # テストコード
-│   ├── unit/                    # ユニットテスト
-│   ├── integration/             # 統合テスト
-│   └── e2e/                     # E2Eテスト
-├── scripts/                     # 各種スクリプト
-│   ├── init_local_db.py        # DynamoDB Local初期化
-│   └── deploy.sh               # 本番環境デプロイスクリプト
-├── docs/                        # ドキュメント
-├── templates/                   # テンプレートファイル
-│   └── csv/                     # CSVテンプレート
-├── docker-compose.yml           # Docker構成ファイル
-├── Dockerfile                   # APIコンテナ定義
-└── .env.example                 # 環境変数サンプル
+│   │   ├── lambda/               # Lambda関数モジュール
+│   │   ├── api_gateway/          # API Gatewayモジュール
+│   │   ├── dynamodb/             # DynamoDBモジュール
+│   │   ├── s3_cloudfront/        # S3 + CloudFront（フロントエンド用）
+│   │   └── iam/                  # IAMモジュール
+│   └── environments/             # 環境別設定
+│       └── prod/                 # 本番環境のみ
+├── scripts/                      # 各種スクリプト
+│   ├── init_local_db.py          # DynamoDB Local初期化
+│   └── deploy.sh                 # 本番環境デプロイスクリプト
+├── docs/                         # プロジェクトドキュメント
+├── docker-compose.yml            # Docker構成ファイル
+├── .pre-commit-config.yaml       # pre-commit設定
+└── README.md                     # プロジェクトREADME
 
 ## API設計
 
@@ -321,6 +478,14 @@ learning-platform-prototype/
 - GSI（Global Secondary Index）は必要最小限に
 - TTLで古いデータの自動削除を設定
 
+### フロントエンド開発
+- コンポーネント駆動開発（React）
+- TypeScriptで型安全性を確保
+- フィーチャーベースのディレクトリ構成
+- Tailwind CSSでユーティリティファーストなスタイリング
+- Zustandによるシンプルな状態管理
+- React Hook Form + Zodで型安全なフォームバリデーション
+
 ### セキュリティ
 - 環境変数に機密情報を格納（AWS Systems Manager Parameter Store推奨）
 - IAMロールは最小権限の原則に従う
@@ -328,6 +493,8 @@ learning-platform-prototype/
 - Slack Bot Tokenの安全な管理
 
 ### 環境の切り分け
+
+#### バックエンド
 - **ローカル環境**: Docker + DynamoDB Local
   - FastAPIは通常のWebサーバーとして起動
   - DynamoDB LocalをDynamoDBの代替として使用
@@ -339,11 +506,23 @@ learning-platform-prototype/
   - 環境変数 `ENV=production` で識別
   - Terraformで全リソースを管理
 
+#### フロントエンド
+- **ローカル環境**: Vite開発サーバー
+  - HMR（Hot Module Replacement）で高速リロード
+  - ローカルAPIへプロキシ設定
+  - 環境変数 `VITE_ENV=local` で識別
+
+- **本番環境**: S3 + CloudFront
+  - ビルド済みSPAをS3にデプロイ
+  - CloudFrontでグローバル配信
+  - 環境変数 `VITE_ENV=production` で識別
+
 ### README.md運用
 - 各意味のあるディレクトリにREADME.mdを配置
 - コード作成時に必ずREADME.mdを読み込む
 - 変更があれば必ずREADME.mdも更新
 - APIエンドポイントの仕様を明記
+- フロントエンドのコンポーネント使用方法を記載
 
 ## 各機能の詳細
 
@@ -397,6 +576,11 @@ learning-platform-prototype/
 - mypy: 静的型チェック
 - bandit: セキュリティ脆弱性チェック
 
+### フロントエンド用フック
+- prettier: コードフォーマッター（HTML/CSS/JS/TS/JSON/MD）
+- eslint: JavaScript/TypeScriptリンター
+- stylelint: CSS/SCSSリンター
+
 ### Terraform用フック
 - terraform_fmt: Terraformコードのフォーマット
 - terraform_validate: Terraform構文検証
@@ -407,3 +591,66 @@ learning-platform-prototype/
 
 ### セキュリティ
 - detect-secrets: 秘密情報の検出
+
+## フロントエンド向け設定
+
+### package.jsonスクリプト
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  }
+}
+```
+
+### フロントエンドのフォルダ構成ガイドライン
+
+#### api/
+- APIとの通信ロジックを集約
+- Axiosインスタンスの設定とエラーハンドリング
+- エンドポイント別にファイルを分割
+
+#### components/
+- 再利用可能なUIコンポーネント
+- ビジネスロジックを含まない純粋なUI要素
+- Storybookでドキュメント化
+
+#### features/
+- 機能単位でコンポーネントとロジックをまとめる
+- 各機能ごとにhooks, components, utilsなどを含む
+- 機能横断的な共通コンポーネントはcomponents/へ
+
+#### hooks/
+- カスタムフックを集約
+- ビジネスロジックと状態管理を抽象化
+- テスト可能な単位で分割
+
+#### pages/
+- ルーティングに対応するページコンポーネント
+- ページ固有のレイアウトとロジック
+- features/のコンポーネントを組み合わせて構成
+
+#### store/
+- Zustandでのグローバル状態管理
+- 機能別にストアを分割
+- 永続化が必要な場合はpersistミドルウェアを使用
+
+### フロントエンドのベストプラクティス
+- コンポーネントは関数コンポーネントで作成
+- カスタムフックでロジックを分離
+- ErrorBoundaryでエラーハンドリング
+- Suspenseでローディング状態を管理
+- コードスプリッティングでバンドルサイズ最適化
+- アクセシビリティを考慮したUI実装
