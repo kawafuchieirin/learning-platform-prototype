@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  api:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=local
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_DEFAULT_REGION=ap-northeast-1
+    depends_on:
+      - dynamodb-local
+    volumes:
+      - ./backend:/app
+      - /app/.venv  # Poetry仮想環境をボリューム除外
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8001:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    ports:
+      - "8002:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+    depends_on:
+      - dynamodb-local
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_ENV=local
+      - VITE_API_BASE_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # node_modulesをボリューム除外
+    depends_on:
+      - api

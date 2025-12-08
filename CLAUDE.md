@@ -7,12 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 learning-platform-prototype - 20〜30人向けの小規模SaaS型学習管理プラットフォーム
 
 ### 主要機能
-1. **ログイン機能** - ユーザー認証とセッション管理
-2. **学習タイマー機能** - 学習時間の記録と管理
-3. **ロードマップ機能** - 学習計画の作成・管理（CSV対応）
-4. **Slack連携機能** - 学習記録の自動投稿
-5. **学習分析機能** - 週次レポートとデータ可視化
-6. **学習記録テンプレート** - 記録作成の効率化
+1. **学習タイマー機能** - 学習時間の記録と管理
+2. **ロードマップ機能** - 学習計画の作成・管理（CSV対応）
+3. **Slack連携機能** - 学習記録の自動投稿
+4. **学習分析機能** - 週次レポートとデータ可視化
+5. **学習記録テンプレート** - 記録作成の効率化
 
 ### 技術スタック
 
@@ -23,6 +22,7 @@ learning-platform-prototype - 20〜30人向けの小規模SaaS型学習管理プ
 - **インフラ**: AWS (Lambda + API Gateway)
 - **IaC**: Terraform
 - **データベース**: DynamoDB
+- **認証**: AWS Cognito User Pool
 - **外部連携**: Slack OAuth / Bot Token
 
 #### フロントエンド
@@ -37,6 +37,7 @@ learning-platform-prototype - 20〜30人向けの小規模SaaS型学習管理プ
 - **グラフ**: Recharts
 - **フォーム管理**: React Hook Form + Zod
 - **テスト**: Vitest + React Testing Library
+- **E2Eテスト**: Playwright + MCP (Model Context Protocol)
 - **リンター/フォーマッター**: ESLint + Prettier
 
 ### アーキテクチャ方針
@@ -46,6 +47,11 @@ learning-platform-prototype - 20〜30人向けの小規模SaaS型学習管理プ
 - フロントエンドはSPAとして実装（S3 + CloudFront でホスティング）
 - ローカル開発はDockerで環境構築（DynamoDB Local使用）
 - AWS環境は本番環境のみ構築
+
+### テスト・品質保証
+- **ユニットテスト**: Jest (フロントエンド), pytest (バックエンド)
+- **E2Eテスト**: Playwright + MCP（ブラウザ自動化、APIテスト）
+- **品質管理**: pre-commit hooks, ESLint, Prettier, Black, isort
 
 ## 開発環境セットアップ
 
@@ -242,6 +248,42 @@ pnpm storybook
 pnpm build-storybook
 ```
 
+### E2Eテスト（Playwright + MCP）
+```bash
+# E2Eテストディレクトリへ移動
+cd tests/e2e
+
+# 依存関係のインストール
+npm install
+
+# Playwrightブラウザをインストール
+npm run install-browsers
+
+# 全てのE2Eテストを実行
+npm test
+
+# ヘッドモードでテスト実行（ブラウザを表示）
+npm run test:headed
+
+# UIモードでテスト実行（インタラクティブ）
+npm run test:ui
+
+# デバッグモードでテスト実行
+npm run test:debug
+
+# Analytics APIテストのみ実行
+npm run test:analytics
+
+# APIテストのみ実行
+npm run test:api
+
+# HTMLレポートを表示
+npm run report
+
+# Playwright Codegen（操作を記録してテストコード生成）
+npm run codegen http://localhost:3000
+```
+
 ### Terraform開発（本番環境デプロイ用）
 ```bash
 # 本番環境ディレクトリへ移動
@@ -295,36 +337,60 @@ aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 ```
 learning-platform-prototype/
 ├── backend/                      # バックエンドコード
-│   ├── src/                      # ソースコード
-│   │   ├── api/                  # FastAPI アプリケーション
-│   │   │   ├── auth/             # 認証機能
-│   │   │   ├── timer/            # タイマー機能
-│   │   │   ├── roadmap/          # ロードマップ機能
-│   │   │   ├── slack/            # Slack連携
-│   │   │   ├── analytics/        # 分析機能
-│   │   │   └── records/          # 学習記録
-│   │   ├── lambda/               # Lambda関数
-│   │   │   ├── auth/             # 認証Lambda
-│   │   │   ├── timer/            # タイマーLambda
-│   │   │   ├── roadmap/          # ロードマップLambda
-│   │   │   ├── slack/            # Slack連携Lambda
-│   │   │   ├── analytics/        # 分析Lambda
-│   │   │   └── records/          # 学習記録Lambda
-│   │   ├── models/               # データモデル定義
-│   │   ├── services/             # ビジネスロジック
-│   │   ├── repositories/         # DynamoDBアクセス層
-│   │   └── shared/               # 共通ユーティリティ
-│   ├── tests/                    # テストコード
-│   │   ├── unit/                 # ユニットテスト
-│   │   └── integration/          # 統合テスト
-│   ├── poetry.lock               # Poetry依存関係ロック
-│   └── pyproject.toml            # Poetry設定ファイル
+│   ├── apis/                     # 機能別API実装
+│   │   ├── timer/                # タイマー機能
+│   │   │   ├── lambda/
+│   │   │   ├── terraform/
+│   │   │   ├── docker/
+│   │   │   ├── tests/
+│   │   │   │   ├── unit/
+│   │   │   │   └── integration/
+│   │   │   └── README.md
+│   │   ├── roadmap/              # ロードマップ機能
+│   │   │   ├── lambda/
+│   │   │   ├── terraform/
+│   │   │   ├── docker/
+│   │   │   ├── tests/
+│   │   │   │   ├── unit/
+│   │   │   │   └── integration/
+│   │   │   └── README.md
+│   │   ├── slack/                # Slack連携
+│   │   │   ├── lambda/
+│   │   │   ├── terraform/
+│   │   │   ├── docker/
+│   │   │   ├── tests/
+│   │   │   │   ├── unit/
+│   │   │   │   └── integration/
+│   │   │   └── README.md
+│   │   ├── analytics/            # 分析機能
+│   │   │   ├── lambda/
+│   │   │   ├── terraform/
+│   │   │   ├── docker/
+│   │   │   ├── tests/
+│   │   │   │   ├── unit/
+│   │   │   │   └── integration/
+│   │   │   └── README.md
+│   │   └── records/              # 学習記録
+│   │       ├── lambda/
+│   │       ├── terraform/
+│   │       ├── docker/
+│   │       ├── tests/
+│   │       │   ├── unit/
+│   │       │   └── integration/
+│   │       └── README.md
+│   ├── shared/                   # 全機能共有のコード
+│   │   ├── libs/                 # 共通ライブラリ
+│   │   ├── terraform/            # 共通Terraformモジュール
+│   │   ├── docker/               # 共通Docker設定
+│   │   └── README.md
+│   └── tests/                    # プロジェクト横断のテスト（任意）
+│       ├── e2e/                  # 全機能統合テスト
+│       └── performance/          # 負荷テストなど
 ├── frontend/                     # フロントエンドコード
 │   ├── public/                   # 静的ファイル
 │   │   └── favicon.ico
 │   ├── src/
 │   │   ├── api/                  # API クライアント
-│   │   │   ├── auth.ts
 │   │   │   ├── timer.ts
 │   │   │   ├── roadmap.ts
 │   │   │   ├── slack.ts
@@ -335,7 +401,6 @@ learning-platform-prototype/
 │   │   │   ├── layout/           # レイアウトコンポーネント
 │   │   │   └── charts/           # グラフコンポーネント
 │   │   ├── features/             # 機能別コンポーネント
-│   │   │   ├── auth/
 │   │   │   ├── timer/
 │   │   │   ├── roadmap/
 │   │   │   ├── slack/
@@ -382,12 +447,6 @@ learning-platform-prototype/
 └── README.md                     # プロジェクトREADME
 
 ## API設計
-
-### 認証API (`/api/v1/auth`)
-- `POST /login` - ユーザーログイン
-- `POST /logout` - ユーザーログアウト
-- `POST /refresh` - トークンリフレッシュ
-- `GET /me` - 現在のユーザー情報取得
 
 ### タイマーAPI (`/api/v1/timer`)
 - `POST /start` - タイマー開始
@@ -525,11 +584,6 @@ learning-platform-prototype/
 - フロントエンドのコンポーネント使用方法を記載
 
 ## 各機能の詳細
-
-### ログイン機能
-- JWT（JSON Web Token）を使用した認証
-- アクセストークンとリフレッシュトークンの管理
-- セッションの有効期限設定（デフォルト: 24時間）
 
 ### 学習タイマー機能
 - ユーザーごとの同時実行制限（1つのタイマーのみ）
